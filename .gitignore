@@ -1,0 +1,6 @@
+.eggs/
+.pytest_cache/
+.ropeproject/
+lettuce_rest.egg-info/
+__pycache__/
+*.py[cod]
