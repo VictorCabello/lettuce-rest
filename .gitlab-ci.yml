@@ -1,0 +1,34 @@
+image: python:2
+
+stages:
+    - lint
+    - unit_test
+    - function_test
+
+lint_job:
+    stage: lint
+    script:
+        - rm -rf /usr/local/lib/python2.7/site-packages/Python
+        - pip install --upgrade pip-tools
+        - pip-compile --output-file requirements/dev.txt requirements/dev.in
+        - pip install -r requirements/dev.txt
+        - flake8 lettuce_rest
+
+unit_test_job:
+    stage: unit_test
+    script:
+        - rm -rf /usr/local/lib/python2.7/site-packages/Python
+        - pip install --upgrade pip-tools
+        - pip-compile --output-file requirements/dev.txt requirements/dev.in
+        - pip install -r requirements/dev.txt
+        - py.test
+
+function_test_job:
+    stage: function_test
+    script:
+        - rm -rf /usr/local/lib/python2.7/site-packages/Python
+        - pip install --upgrade pip-tools
+        - pip-compile --output-file requirements/dev.txt requirements/dev.in
+        - pip install -r requirements/dev.txt
+        - cd tests
+        - lettuce

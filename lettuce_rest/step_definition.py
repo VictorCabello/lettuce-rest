@@ -1,5 +1,9 @@
 from lettuce import step, world
 
+__all__ = [
+    'set_base_url',
+    'add_path_to_url'
+]
 
 WORLD_PREFIX = 'world'
 
@@ -21,3 +25,8 @@ def set_or_resolve(property_name, new_value):
 @step('I set base URL to "([^"]*)"')
 def set_base_url(step, base_url):
     set_or_resolve('base_url', base_url)
+
+
+@step('I add path "([^"]*)" to base URL')
+def add_path_to_url(step, path):
+    world.base_url += "/" + path
