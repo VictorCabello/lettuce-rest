@@ -22,6 +22,7 @@ cache:
 before_script:
     - pip install pip-tools virtualenv
     - pip-compile --output-file requirements/dev.txt requirements/dev.in
+    - virtualenv venv
     - source venv/bin/activate
     - pip install -r requirements/dev.txt
 
