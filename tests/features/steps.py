@@ -13,4 +13,4 @@ def set_prop(step, property_name, value):
 def check_prop(step, property_name, value):
     result = getattr(world, property_name)
 
-    result.should.be.equal(value)
+    str(result).should.be.equal(value)
