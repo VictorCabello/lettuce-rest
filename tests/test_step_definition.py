@@ -1,6 +1,6 @@
 import sure
 from lettuce import world
-from mock import patch
+from mock import patch, MagicMock, PropertyMock
 from lettuce_rest import step_definition
 
 SURE_VERSION = sure.version
@@ -170,3 +170,76 @@ def test_remove_all_headers_01():
     result = world.headers
 
     result.should.be.equal({})
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_request_with_parameters_01(requests_mock):
+    """
+    request_with_parameters_01
+    Verify request no headers, with ssl verification with static parameters
+    """
+    input_values = {
+        'base_url': 'http://fake.io',
+        'input_parameters': [{
+            'param1':  'value1',
+            'param2':  'value2',
+        }],
+        'request_verb': 'GET',
+        'url_path_segment': 'api_name'
+    }
+
+    helper_request_with_parameters(**input_values)
+
+    requests_mock.get.assert_called_once_with('http://fake.io/api_name',
+                                              {
+                                                  'param1': 'value1',
+                                                  'param2': 'value2',
+                                              },
+                                              headers={},
+                                              verify=True)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_request_with_parameters_02(requests_mock):
+    """
+    request_with_parameters_02
+    Verify request a header, without ssl verification with dynamic parameters
+    """
+    world.random_var = 'some_value'
+    world.headers = {'header_1': 'value'}
+    world.verify_ssl = False
+    input_values = {
+        'base_url': 'http://fake.io',
+        'input_parameters': [{
+            'param1':  'world.random_var',
+            'param2':  'value2',
+        }],
+        'request_verb': 'GET',
+        'url_path_segment': 'api_name'
+    }
+
+    helper_request_with_parameters(**input_values)
+
+    requests_mock.get.assert_called_once_with('http://fake.io/api_name',
+                                              {
+                                                  'param1': 'some_value',
+                                                  'param2': 'value2',
+                                              },
+                                              headers={'header_1': 'value'},
+                                              verify=False)
+
+
+def helper_request_with_parameters(base_url='',
+                                   request_verb='',
+                                   input_parameters=[],
+                                   url_path_segment=''):
+    world.base_url = base_url
+
+    hasesh_mock = PropertyMock(return_value=input_parameters)
+    step_mock = MagicMock()
+    type(step_mock).hasesh = hasesh_mock
+
+    step_definition.request_with_parameters(step_mock,
+                                            request_verb,
+                                            url_path_segment)
+

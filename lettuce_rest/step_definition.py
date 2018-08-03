@@ -1,4 +1,5 @@
 from lettuce import step, world, before
+import requests
 
 __all__ = [
     'set_base_url',
@@ -82,3 +83,23 @@ def remove_header(step, header_name):
 @step('I clear all headers')
 def remove_all_headers(step):
     world.headers.clear()
+
+
+@step('I make a "([^"]*)" request to "([^"]*)" with parameters')
+def request_with_parameters(step, request_verb, url_path_segment):
+
+    url = world.base_url + '/' + url_path_segment
+
+    if len(step.hasesh) is not 1:
+        raise Exception('Only one requests is allowed on this sentences')
+
+    params = step.hasesh[0]
+
+    for name, value in params.items():
+        params[name] = eval(value) if value.startswith(WORLD_PREFIX) else value
+
+    world.response = \
+        getattr(requests, request_verb.lower())(url,
+                                                params,
+                                                headers=world.headers,
+                                                verify=world.verify_ssl)
