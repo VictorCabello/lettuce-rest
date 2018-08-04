@@ -1,4 +1,9 @@
 from lettuce import step, world, before
+import sure
+import requests
+import json
+
+SURE_VERSION = sure.version
 
 __all__ = [
     'set_base_url',
@@ -82,3 +87,111 @@ def remove_header(step, header_name):
 @step('I clear all headers')
 def remove_all_headers(step):
     world.headers.clear()
+
+
+@step('I make a "([^"]*)" request to "([^"]*)" with parameters')
+def request_with_parameters(step, request_verb, url_path_segment):
+
+    url = world.base_url + '/' + url_path_segment
+
+    if len(step.hasesh) is not 1:
+        raise Exception('Only one requests is allowed on this sentences')
+
+    params = step.hasesh[0]
+
+    for name, value in params.items():
+        params[name] = eval(value) if value.startswith(WORLD_PREFIX) else value
+
+    world.response = \
+        getattr(requests, request_verb.lower())(url,
+                                                params,
+                                                headers=world.headers,
+                                                verify=world.verify_ssl)
+
+
+@step('the response status code should equal "([^"])"')
+def status_code_validation(step, expected_http_status_code):
+    response = world.response
+    str(response.status_code).should.be.equal(expected_http_status_code)
+
+
+@step('the response status code should not equal "([^"])"')
+def status_code_validation_1(step, invalid_http_status_code):
+    response = world.response
+    str(response.status_code).\
+        should.be.different_of(invalid_http_status_code)
+
+
+@step('the response status code should be among "([^"])"')
+def status_code_array_validation(step, expected_http_status_codes):
+    response = world.response
+    expected_codes_list = \
+        [int(x) for x in expected_http_status_codes.split(',')]
+    expected_codes_list.should.contain(response.status_code)
+
+
+@step('the response status message should equal to the following:')
+def status_message_validation(step):
+    response = world.response
+    expected_http_status_message = step.multiline
+    response.reason.should_not.be.different_of(expected_http_status_message)
+
+
+@step('the response status message should looks like to the following:')
+def status_message_similarity_validation(step):
+    response = world.response
+    expected_http_status_message = step.multiline
+    response.reason.should.look_like(expected_http_status_message)
+
+
+@step('the response status message should contains to the following json' +
+      'fragment:')
+def status_message_json_contains_validation(step):
+    response = world.response
+    response_json = response.json()
+
+    subset_http_status_message = step.multiline
+    subset_http_status_message = subset_http_status_message.encode("utf-8")
+    subset_json = json.loads(subset_http_status_message)
+    subset_json = dict(map(lambda kv: (helper_unicodo_to_str(kv[0]),
+                                       helper_unicodo_to_str(kv[1])),
+                           subset_json.iteritems()))
+
+    assert helper_dict_has_dict(response_json, subset_json), \
+        "%s can't be found on %s" % (str(subset_json), str(response_json))
+
+
+@step('the response status message should contains to the following json')
+def status_message_json_validation(step):
+    response = world.response
+    response_json = response.json()
+
+    subset_http_status_message = step.multiline
+    subset_http_status_message = subset_http_status_message.encode("utf-8")
+    subset_json = json.loads(subset_http_status_message)
+    subset_json = dict(map(lambda kv: (helper_unicodo_to_str(kv[0]),
+                                       helper_unicodo_to_str(kv[1])),
+                           subset_json.iteritems()))
+
+    subset_json.should.equal(response_json)
+
+
+def helper_unicodo_to_str(msg):
+    if isinstance(msg, unicode):
+        return msg.encode("utf-8")
+    if isinstance(msg, dict):
+        return dict(map(lambda kv: (helper_unicodo_to_str(kv[0]),
+                                    helper_unicodo_to_str(kv[1])),
+                        msg.iteritems()))
+
+    return msg
+
+
+def helper_dict_has_dict(superset, subset):
+    return_value = False
+
+    for superset in superset.values():
+        if isinstance(superset, dict):
+            return_value |= subset == superset
+
+    return return_value

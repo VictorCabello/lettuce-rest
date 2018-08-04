@@ -1,6 +1,7 @@
 import sure
+import pytest
 from lettuce import world
-from mock import patch
+from mock import patch, MagicMock, PropertyMock
 from lettuce_rest import step_definition
 
 SURE_VERSION = sure.version
@@ -170,3 +171,396 @@ def test_remove_all_headers_01():
     result = world.headers
 
     result.should.be.equal({})
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_request_with_parameters_01(requests_mock):
+    """
+    request_with_parameters_01
+    Verify request no headers, with ssl verification with static parameters
+    """
+    input_values = {
+        'base_url': 'http://fake.io',
+        'input_parameters': [{
+            'param1':  'value1',
+            'param2':  'value2',
+        }],
+        'request_verb': 'GET',
+        'url_path_segment': 'api_name'
+    }
+
+    helper_request_with_parameters(**input_values)
+
+    requests_mock.get.assert_called_once_with('http://fake.io/api_name',
+                                              {
+                                                  'param1': 'value1',
+                                                  'param2': 'value2',
+                                              },
+                                              headers={},
+                                              verify=True)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_request_with_parameters_02(requests_mock):
+    """
+    request_with_parameters_02
+    Verify request a header, without ssl verification with dynamic parameters
+    """
+    world.random_var = 'some_value'
+    world.headers = {'header_1': 'value'}
+    world.verify_ssl = False
+    input_values = {
+        'base_url': 'http://fake.io',
+        'input_parameters': [{
+            'param1':  'world.random_var',
+            'param2':  'value2',
+        }],
+        'request_verb': 'GET',
+        'url_path_segment': 'api_name'
+    }
+
+    helper_request_with_parameters(**input_values)
+
+    requests_mock.get.assert_called_once_with('http://fake.io/api_name',
+                                              {
+                                                  'param1': 'some_value',
+                                                  'param2': 'value2',
+                                              },
+                                              headers={'header_1': 'value'},
+                                              verify=False)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_request_with_parameters_03(requests_mock):
+    """
+    request_with_parameters_03
+    |Input                                 | Expected|
+    +--------------------------------------+---------+
+    |more than 1 rows on parameters tables |Exception|
+    """
+    hasesh_mock = PropertyMock(return_value=[{}, {}])
+    step_mock = MagicMock()
+    type(step_mock).hasesh = hasesh_mock
+
+    with pytest.raises(Exception):
+        step_definition.request_with_parameters(step_mock, "", "")
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_code_validation_01(requests_mock):
+    """
+    test_status_code_validation_01
+    |Input | Expected|
+    +------+---------+
+    |10    | 10      |
+    """
+    status_code = PropertyMock(return_value=10)
+    response = MagicMock()
+    type(response).status_code = status_code
+    world.response = response
+    step_definition.status_code_validation(None, '10')
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_code_validation_02(requests_mock):
+    """
+    test_status_code_validation_02
+    |Input | Expected| Output       |
+    +------+---------+--------------+
+    |10    | 10      |AssertionError|
+    """
+    status_code = PropertyMock(return_value=10)
+    response = MagicMock()
+    type(response).status_code = status_code
+    world.response = response
+    with pytest.raises(AssertionError):
+        step_definition.status_code_validation(None, '11')
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_code_validation_1_01(requests_mock):
+    """
+    test_status_code_validation_01
+    |Input | Expected               |
+    +------+------------------------+
+    |11    | Any int except 11      |
+    """
+    status_code = PropertyMock(return_value=11)
+    response = MagicMock()
+    type(response).status_code = status_code
+    world.response = response
+    step_definition.status_code_validation_1(None, '10')
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_code_validation_1_02(requests_mock):
+    """
+    test_status_code_validation_01
+    |Input  | Expected               | Output       |
+    +-------+------------------------+--------------+
+    |404    | 404                    |AssertionError|
+    """
+    status_code = PropertyMock(return_value=404)
+    response = MagicMock()
+    type(response).status_code = status_code
+    world.response = response
+    with pytest.raises(AssertionError):
+        step_definition.status_code_validation_1(None, '404')
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_code_array_validation_01(requests_mock):
+    """
+    test_status_code_array_validation_01
+    |Input | Expected               |
+    +------+------------------------+
+    |404   | 404,500,   200         |
+    """
+    status_code = PropertyMock(return_value=404)
+    response = MagicMock()
+    type(response).status_code = status_code
+    world.response = response
+    step_definition.status_code_array_validation(None, '404,500,   200       ')
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_code_array_validation_02(requests_mock):
+    """
+    test_status_code_array_validation_01
+    |Input | Expected               | Output       |
+    +------+------------------------+--------------+
+    |403   | 404,500,   200         |AssertionError|
+    """
+    status_code = PropertyMock(return_value=403)
+    response = MagicMock()
+    type(response).status_code = status_code
+    world.response = response
+    with pytest.raises(AssertionError):
+        step_definition.status_code_array_validation(None,
+                                                     '404,500,   200       ')
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_validation_01(requests_mock):
+
+    """
+    test_status_code_array_validation_01
+    | Input     | Expected          | Output    |
+    | --        | --                | --        |
+    | a message | same than impourt | no errors |
+    """
+    msg = """
+    some random strint
+    """
+    reason = PropertyMock(return_value=msg)
+    response = MagicMock()
+    type(response).reason = reason
+    world.response = response
+
+    multiline = PropertyMock(return_value=msg)
+    step = MagicMock()
+    type(step).multiline = multiline
+
+    step_definition.status_message_validation(step)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_validation_02(requests_mock):
+    """
+    test_status_message_validation_02
+    | Input     | Expected              | Output    |
+    | --        | --                    | --        |
+    | a message | differnt than impourt | assertion |
+    """
+    msg = """
+    some random strint
+    """
+    reason = PropertyMock(return_value=msg)
+    response = MagicMock()
+    type(response).reason = reason
+    world.response = response
+
+    multiline = PropertyMock(return_value='other')
+    step = MagicMock()
+    type(step).multiline = multiline
+    with pytest.raises(AssertionError):
+        step_definition.status_message_validation(step)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_similarity_validation_01(requests_mock):
+
+    """
+    test_status_message_similarity_validation_01
+    | Input     | Expected          | Output    |
+    | --        | --                | --        |
+    | a message | same than impourt | no errors |
+    """
+    msg = """
+    some random strint
+    """
+    msg2 = """
+
+    some
+
+    RANDOM strint
+
+
+
+
+
+    """
+
+    reason = PropertyMock(return_value=msg)
+    response = MagicMock()
+    type(response).reason = reason
+    world.response = response
+
+    multiline = PropertyMock(return_value=msg2)
+    step = MagicMock()
+    type(step).multiline = multiline
+
+    step_definition.status_message_similarity_validation(step)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_similarity_validation_02(requests_mock):
+    """
+    test_status_message_similarity_validation_02
+    | Input     | Expected              | Output    |
+    | --        | --                    | --        |
+    | a message | differnt than impourt | assertion |
+    """
+    msg = """
+    some random strint
+    """
+    msg2 = """
+
+    some
+
+    dANDOM strint
+
+
+
+
+
+    """
+    reason = PropertyMock(return_value=msg)
+    response = MagicMock()
+    type(response).reason = reason
+    world.response = response
+
+    multiline = PropertyMock(return_value=msg2)
+    step = MagicMock()
+    type(step).multiline = multiline
+    with pytest.raises(AssertionError):
+        step_definition.status_message_similarity_validation(step)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_json_contains_validation_01(requests_mock):
+    """
+    test_status_message_json_contains_validation_01
+    | Input  | Expected                    | Output    |
+    | --     | --                          | --        |
+    | a json | json that contins the input | no errors |
+    """
+    msg = """
+     {"value": 2 }
+    """
+
+    response = MagicMock()
+    response.json.return_value = {'map': {'value': 2}}
+    world.response = response
+
+    multiline = PropertyMock(return_value=msg)
+    step = MagicMock()
+    type(step).multiline = multiline
+
+    step_definition.status_message_json_contains_validation(step)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_json_contains_validation_02(requests_mock):
+    """
+    test_status_message_json_contains_validation_02
+    | Input  | Expected                        | Output    |
+    | --     | --                              | --        |
+    | a json | json that not contins the input | assertion |
+    """
+    msg = """
+    {"value": 3 }
+    """
+
+    response = MagicMock()
+    response.json.return_value = {'map': {'value': 2}}
+    world.response = response
+
+    multiline = PropertyMock(return_value=msg)
+    step = MagicMock()
+    type(step).multiline = multiline
+
+    with pytest.raises(AssertionError):
+        step_definition.status_message_json_contains_validation(step)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_json_validation_01(requests_mock):
+    """
+    test_status_message_json_validation_01
+    | Input  | Expected                    | Output    |
+    | --     | --                          | --        |
+    | a json | json that contins the input | no errors |
+    """
+    msg = """
+     {"value": 2 }
+    """
+
+    response = MagicMock()
+    response.json.return_value = {'value': 2}
+    world.response = response
+
+    multiline = PropertyMock(return_value=msg)
+    step = MagicMock()
+    type(step).multiline = multiline
+
+    step_definition.status_message_json_validation(step)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_json_validation_02(requests_mock):
+    """
+    test_status_message_json_validation_02
+    | Input  | Expected                        | Output    |
+    | --     | --                              | --        |
+    | a json | json that not contins the input | assertion |
+    """
+    msg = """
+    {"value": 3 }
+    """
+
+    response = MagicMock()
+    response.json.return_value = {'value': 2}
+    world.response = response
+
+    multiline = PropertyMock(return_value=msg)
+    step = MagicMock()
+    type(step).multiline = multiline
+
+    with pytest.raises(AssertionError):
+        step_definition.status_message_json_validation(step)
+
+
+def helper_request_with_parameters(base_url='',
+                                   request_verb='',
+                                   input_parameters=[],
+                                   url_path_segment=''):
+    world.base_url = base_url
+
+    hasesh_mock = PropertyMock(return_value=input_parameters)
+    step_mock = MagicMock()
+    type(step_mock).hasesh = hasesh_mock
+
+    step_definition.request_with_parameters(step_mock,
+                                            request_verb,
+                                            url_path_segment)
