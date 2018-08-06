@@ -41,3 +41,17 @@ Feature: Steps Implementation
         And I set "test_name_2" header to "staging_url"
         When I clear all headers
         Then the property "headers" of the world should be "{}"
+
+
+    Scenario: Compare different objects providing path
+        Given I set base URL to "http://www.mocky.io/v2"
+        And I make a "GET" request to "57b6d6740f00000e0a0b7a5a"
+        Then JSON at path ".data.array" should equal [1,2,3]
+        Then JSON at path ".data.boolean" should equal true
+        Then JSON at path ".data.null" should equal null
+        Then JSON at path ".data.object" should equal {"a": "b", "c": "d", "e": "f"}
+        Then JSON at path ".data.string" should equal "Hello World"
+        Then JSON at path ".data.numbers.int" should equal 123
+        Then JSON at path ".data.numbers.float" should equal 3.0
+        Then JSON at path ".data.numbers.long" should equal 9223372036854775808
+        Then JSON at path ".data.numbers" should equal {"int": 123, "float": 3.0, "long": 9223372036854775808}

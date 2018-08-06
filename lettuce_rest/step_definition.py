@@ -2,6 +2,7 @@ from lettuce import step, world, before
 import sure
 import requests
 import json
+import jpath
 
 SURE_VERSION = sure.version
 
@@ -89,6 +90,17 @@ def remove_all_headers(step):
     world.headers.clear()
 
 
+@step('I make a "([^"]*)" request to "([^"]*)"')
+def request(step, request_verb, url_path_segment):
+
+    url = world.base_url + '/' + url_path_segment
+
+    world.response = \
+        getattr(requests, request_verb.lower())(url,
+                                                headers=world.headers,
+                                                verify=world.verify_ssl)
+
+
 @step('I make a "([^"]*)" request to "([^"]*)" with parameters')
 def request_with_parameters(step, request_verb, url_path_segment):
 
@@ -174,6 +186,20 @@ def status_message_json_validation(step):
                            subset_json.iteritems()))
 
     subset_json.should.equal(response_json)
+
+
+@step('JSON at path \"(.*)\" should equal(.*)')
+def json_object_validation(step, json_path, expected_json_value):
+    response = world.response
+    data = response.json()
+    actual_json_value = jpath.get(json_path, data)
+
+    if expected_json_value.startswith(WORLD_PREFIX):
+        expected_json_value = getattr(world,
+                                      expected_json_value[len(WORLD_PREFIX):])
+    else:
+        converted_value = json.loads(expected_json_value)
+        actual_json_value.should.be.equal(converted_value)
 
 
 def helper_unicodo_to_str(msg):
