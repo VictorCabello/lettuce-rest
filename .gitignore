@@ -4,3 +4,5 @@
 lettuce_rest.egg-info/
 __pycache__/
 *.py[cod]
+.coverage
+htmlcov

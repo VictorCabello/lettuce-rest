@@ -508,9 +508,9 @@ def test_status_message_json_contains_validation_02(requests_mock):
 def test_status_message_json_validation_01(requests_mock):
     """
     test_status_message_json_validation_01
-    | Input  | Expected                    | Output    |
-    | --     | --                          | --        |
-    | a json | json that contins the input | no errors |
+    | Input  | Expected                                          | Output    |
+    | --     | --                                                | --        |
+    | a json | json that contins the a expeced value on the path | no errors |
     """
     msg = """
      {"value": 2 }
@@ -549,6 +549,37 @@ def test_status_message_json_validation_02(requests_mock):
 
     with pytest.raises(AssertionError):
         step_definition.status_message_json_validation(step)
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_json_path_validation_01(requests_mock):
+    """
+    test_status_message_json_path_validation_01
+    | Input  | Expected                    | Output    |
+    | --     | --                          | --        |
+    | a json | json that contins the input | no errors |
+    """
+    response = MagicMock()
+    response.json.return_value = {'value': 2}
+    world.response = response
+
+    step_definition.json_object_validation(None, 'value', '2')
+
+
+@patch('lettuce_rest.step_definition.requests')
+def test_status_message_json_path_validation_02(requests_mock):
+    """
+    test_status_message_json_path_validation_02
+    | Input  | Expected                        | Output    |
+    | --     | --                              | --        |
+    | a json | json that not contins the input | assertion |
+    """
+    response = MagicMock()
+    response.json.return_value = {'value': 2}
+    world.response = response
+
+    with pytest.raises(AssertionError):
+        step_definition.json_object_validation(None, 'value', '3')
 
 
 def helper_request_with_parameters(base_url='',
