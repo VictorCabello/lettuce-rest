@@ -30,6 +30,7 @@ stages:
     - lint
     - unit_test
     - function_test
+    - deploy
 
 lint_job:
     stage: lint
@@ -39,10 +40,26 @@ lint_job:
 unit_test_job:
     stage: unit_test
     script:
-        - py.test
+        - py.test --cov-report html --cov=lettuce_rest tests
+    artifacts:
+        paths:
+            - htmlcov/
+
 
 function_test_job:
     stage: function_test
     script:
         - cd tests
         - lettuce
+pages:
+    stage: deploy
+    dependencies:
+        - unit_test_job
+    script:
+        - mv htmlcov/ public/
+    artifacts:
+        paths:
+            - public
+        expire_in: 30 days
+    only:
+        - master
